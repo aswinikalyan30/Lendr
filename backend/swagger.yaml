@@ -1,0 +1,241 @@
+openapi: 3.0.0
+info:
+  title: Lendr - Equipment Lending Portal
+  version: 1.0.0
+  description: >
+    REST API for managing user registration, equipment inventory, and item booking approvals.
+servers:
+  - url: /v1
+tags:
+  - name: Auth
+    description: User registration, login and token refresh
+  - name: Equipment
+    description: Equipment CRUD endpoints (admin/staff only for write)
+  - name: Bookings
+    description: Booking creation, approval and return flow
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        username: { type: string, example: Aswini123 }
+        email: { type: string, example: aswini@gmail.com }
+        role: { type: string, enum: [student, professor, admin], example: student }
+        password: { type: string, example: "*****"}
+        booking_history: {
+          type: array,
+          items: {},
+          example: [{booking_id: "123", last_booked_at: "2025-10-14T09:00:00Z"}]}
+    Equipment:
+      type: object
+      properties:
+        id: { type: integer, example: 3 }
+        name: { type: string, example: DSLR Camera }
+        category: { type: string, example: Electronics }
+        condition: { type: string, example: Good }
+        condition_details: {type: string, example: "No damages"}
+        quantity: { type: integer, example: 2 }
+        description: { type: string, example: "Canon 250D"}
+    Booking:
+      type: object
+      properties:
+        id: { type: integer, example: 12 }
+        userId: { type: integer, example: 1 }
+        equipmentId: { type: integer, example: 3 }
+        requested_at: { type: string, format: date-time, example: "2025-10-14T09:00:00Z" }
+        returned_at: { type: string, format: date-time, example: "2025-10-14T17:00:00Z" }
+        status: { type: string, enum: [pending, approved, rejected, returned], example: pending }
+paths:
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email: { type: string }
+                password: { type: string }
+                name: { type: string }
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        "409":
+          description: Email already exists
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: JWT access token returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string, example: eyJhbGciOi... }
+        "401":
+          description: Invalid credentials
+
+  /equipments:
+    get:
+      tags: [Equipment]
+      security: [{ bearerAuth: [] }]
+      summary: List all equipment
+      responses:
+        "200":
+          description: Array of equipment
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Equipment' }
+    post:
+        tags: [Equipment]
+        security: [{ bearerAuth: [] }]
+        summary: Create new equipment (admin/staff)
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, quantity]
+                properties:
+                  name: { type: string }
+                  category: { type: string }
+                  condition: { type: string }
+                  quantity: { type: integer }
+        responses:
+          "201":
+            description: Equipment created
+            content:
+              application/json:
+                schema: { $ref: '#/components/schemas/Equipment' }  
+
+  /equipments/{id}:  
+    get:
+      tags: [Equipment]
+      security: [{ bearerAuth: [] }]
+      summary: Get single equipment details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Array of equipment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Equipment' }
+  /equipment/{id}:
+    put:
+      tags: [Equipment]
+      security: [{ bearerAuth: [] }]
+      summary: Update equipment details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                quantity: { type: integer }
+                condition: { type: string }
+      responses:
+        "200": { description: Updated successfully }
+    delete:
+      tags: [Equipment]
+      security: [{ bearerAuth: [] }]
+      summary: Delete equipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Deleted successfully }
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      security: [{ bearerAuth: [] }]
+      summary: List all bookings (admins see all, users see own)
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Booking' }
+    post:
+      tags: [Bookings]
+      security: [{ bearerAuth: [] }]
+      summary: Create booking request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [equipmentId, startTs, endTs]
+              properties:
+                equipmentId: { type: integer }
+                startTs: { type: string, format: date-time }
+                endTs: { type: string, format: date-time }
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Booking' }
+
+  /bookings/{id}:
+    patch:
+      tags: [Bookings]
+      security: [{ bearerAuth: [] }]
+      summary: Update status of a booking to either approved/rejected or returned
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Booking approved }
+        "409": { description: Conflicts with another approved booking }
+
+security:
+  - bearerAuth: []
