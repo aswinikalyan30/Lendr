@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const ctrl = require('../controllers/equipment.controller');
-const { authenticate, authorize } = require('../middleware/auth.middleware');
+const ctrl = require('../controllers/equipments.controller');
+const { authenticate, authorize } = require('../auth/auth.middleware');
 
 router.get('/', authenticate, ctrl.list);
 router.post('/', authenticate, authorize('ADMIN', 'STAFF'), ctrl.create);

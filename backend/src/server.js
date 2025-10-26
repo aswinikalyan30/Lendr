@@ -2,14 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const db = require('./models');
+const db = require('../src/config/db.config');
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-db.sequelize.sync({ alter: true }).then(() => console.log('Database synced'));
+db.sync({ alter: true }).then(() => console.log('Database synced'));
 
 app.use('/v1/auth', require('./routes/auth.routes'));
 app.use('/v1/equipment', require('./routes/equipment.routes'));
