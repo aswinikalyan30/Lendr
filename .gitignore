@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Backend secrets (local dev keys)
+backend/secrets/
+
+# Env files
+backend/.env
+frontend/lendr/.env
+
+# Vite / dist
+frontend/lendr/dist/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store

@@ -8,8 +8,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import {
   IconBrandGoogle,
 } from "@tabler/icons-react";
-
-const API_BASE_URL = "http://localhost:4000";
+import { userlogin } from "../service/users";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -40,18 +39,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(formData)
-      });
+      const data = await userlogin(formData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+      if (!data) {
+        throw new Error("Login failed");
       }
 
       // Store token and user data in localStorage

@@ -1,9 +1,37 @@
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User } = require('../model');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// Token expiry
 const JWT_EXPIRES_IN = '7d';
+
+// Try to load RS256 keys first (preferred). Keys can be provided either as file paths or
+// as raw PEM strings in environment variables.
+function loadKey(envPathVar, envRawVar) {
+  const filePath = process.env[envPathVar];
+  if (filePath) {
+    try {
+      return fs.readFileSync(path.resolve(filePath), 'utf8');
+    } catch (err) {
+      console.warn(`Could not read key file at ${filePath}:`, err.message);
+    }
+  }
+  if (process.env[envRawVar]) return process.env[envRawVar];
+  return null;
+}
+
+const PRIVATE_KEY = loadKey('JWT_PRIVATE_KEY_PATH', 'JWT_PRIVATE_KEY');
+const PUBLIC_KEY = loadKey('JWT_PUBLIC_KEY_PATH', 'JWT_PUBLIC_KEY');
+
+const USE_RS256 = Boolean(PRIVATE_KEY && PUBLIC_KEY);
+
+// If RS256 keys are not available, fall back to an HMAC secret (HS256) from env.
+const HMAC_SECRET = process.env.JWT_SECRET || process.env.ACCESS_TOKEN_SECRET || null;
+if (!USE_RS256 && !HMAC_SECRET) {
+  console.warn('No JWT signing keys found. Set JWT_PRIVATE_KEY_PATH & JWT_PUBLIC_KEY_PATH for RS256 or JWT_SECRET for HS256.');
+}
 
 exports.register = async (req, res) => {
   try {
@@ -31,12 +59,19 @@ exports.register = async (req, res) => {
       role: role || 'STUDENT'
     });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    // Generate JWT token. Use RS256 if keys are available, otherwise HS256.
+    let token;
+    if (USE_RS256) {
+      token = jwt.sign({ id: user.id, email: user.email, role: user.role }, PRIVATE_KEY, {
+        algorithm: 'RS256',
+        expiresIn: JWT_EXPIRES_IN,
+      });
+    } else {
+      token = jwt.sign({ id: user.id, email: user.email, role: user.role }, HMAC_SECRET, {
+        algorithm: 'HS256',
+        expiresIn: JWT_EXPIRES_IN,
+      });
+    }
 
     // Return user data (excluding password)
     res.status(201).json({
@@ -76,12 +111,19 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    // Generate JWT token. Use RS256 if keys are available, otherwise HS256.
+    let token;
+    if (USE_RS256) {
+      token = jwt.sign({ id: user.id, email: user.email, role: user.role }, PRIVATE_KEY, {
+        algorithm: 'RS256',
+        expiresIn: JWT_EXPIRES_IN,
+      });
+    } else {
+      token = jwt.sign({ id: user.id, email: user.email, role: user.role }, HMAC_SECRET, {
+        algorithm: 'HS256',
+        expiresIn: JWT_EXPIRES_IN,
+      });
+    }
 
     // Return user data (excluding password)
     res.status(200).json({

@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     condition: DataTypes.STRING,
     quantity: { type: DataTypes.INTEGER, defaultValue: 1 },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
+    imagePath: { type: DataTypes.STRING, field: 'image_path' },
   });
   return Equipment;
 };
